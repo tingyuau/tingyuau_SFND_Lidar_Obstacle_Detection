@@ -133,16 +133,16 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
   auto startTime = std::chrono::steady_clock::now();
 
   pcl::PointIndices::Ptr inliersResult {new pcl::PointIndices};
-  pcl::PointIndices::Ptr inliers {new pcl::PointIndices};
 
   while(maxIterations--)
   {
-    while (inliers->indices.size() < 3)
-      inliers->indices.push_back(rand()%(cloud->points.size()));
+    std::unordered_set<int> inliers;
+    while (inliers.size() < 3)
+      inliers.insert(rand()%(cloud->points.size()));
 
     float x1, y1, z1, x2, y2, z2, x3, y3, z3;
 
-		auto itr = inliers->indices.begin();
+		auto itr = inliers.begin();
 		x1 = cloud->points[*itr].x;
 		y1 = cloud->points[*itr].y;
 		z1 = cloud->points[*itr].z;
@@ -162,23 +162,23 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 
 		for(int index=0; index < cloud->points.size(); index++)
 		{
-			if (std::count(inliers->indices.begin(), inliers->indices.end(), index))
+			if (inliers.count(index)>0)
 				continue;
 
-			pcl::PointXYZ point = cloud->points[index];
+			PointT point = cloud->points[index];
 			float x4 = point.x;
 			float y4 = point.y;
 			float z4 = point.z;
 
-			float d = fabs(a*x4+b*y4+c*z4+d)/sqrt(a*a+b*b+c*c);
+			float dist = fabs(a*x4+b*y4+c*z4+d)/sqrt(a*a+b*b+c*c);
 
-			if (d <= distanceTol)
-				inliers->indices.push_back(index);
+			if (dist <= distanceTol)
+				inliers.insert(index);
 		}
 
-		if(inliers->indices.size()>inliersResult->indices.size())
+		if(inliers.size()>inliersResult->indices.size())
 		{
-			inliersResult = inliers;
+			inliersResult->indices.assign(inliers.begin(), inliers.end());
 		}
 
   }

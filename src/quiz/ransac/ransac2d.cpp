@@ -160,9 +160,9 @@ std::unordered_set<int> RansacPlane(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, i
 			float y4 = point.y;
 			float z4 = point.z;
 
-			float d = fabs(a*x4+b*y4+c*z4+d)/sqrt(a*a+b*b+c*c);
+			float dist = fabs(a*x4+b*y4+c*z4+d)/sqrt(a*a+b*b+c*c);
 
-			if (d <= distanceTol)
+			if (dist <= distanceTol)
 				inliers.insert(index);
 		}
 
