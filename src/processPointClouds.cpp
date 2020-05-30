@@ -243,6 +243,75 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
     return clusters;
 }
 
+template<typename PointT>
+void ProcessPointClouds<PointT>::clusterHelper(int indice, const std::vector<std::vector<float>> points, std::vector<int>& cluster, std::vector<bool>& processed, KdTree* tree, float distanceTol)
+{
+	processed[indice] = true;
+	cluster.push_back(indice);
+
+	std::vector<int> nearest = tree->search(points[indice], distanceTol);
+
+	for(int id : nearest)
+	{
+		if(!processed[id])
+			clusterHelper(id, points, cluster, processed, tree, distanceTol);
+	}
+}
+
+
+template<typename PointT>
+std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::KdClustering(typename pcl::PointCloud<PointT>::Ptr cloud, float clusterTolerance, int minSize, int maxSize)
+{
+  // Time clustering process
+  auto startTime = std::chrono::steady_clock::now();
+
+  std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
+
+  KdTree* tree = new KdTree;
+  std::vector<std::vector<float>> cloudPoints;
+
+  for(int i=0; i<cloud->points.size(); i++)
+  {
+    std::vector<float> point {cloud->points[i].x, cloud->points[i].y, cloud->points[i].z};
+    tree->insert(point,i);
+    cloudPoints.push_back(point);
+  }
+
+  std::vector<bool> processed(cloud->points.size(), false);
+
+  int i = 0;
+  while(i< cloud->points.size())
+  {
+    if(processed[i])
+    {
+      i++;
+      continue;
+    }
+
+    std::vector<int> cluster;
+
+    clusterHelper(i, cloudPoints, cluster, processed, tree, clusterTolerance);
+
+    if (cluster.size()<=maxSize && cluster.size()>=minSize)
+    {
+      typename pcl::PointCloud<PointT>::Ptr cloudCluster (new pcl::PointCloud<PointT>);
+
+      for(int index : cluster)
+        cloudCluster->points.push_back(cloud->points[index]);
+
+      clusters.push_back(cloudCluster);
+    }
+
+    i++;
+  }
+
+
+  auto endTime = std::chrono::steady_clock::now();
+  auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+  std::cout << "clustering took " << elapsedTime.count() << " milliseconds and found " << clusters.size() << " clusters" << std::endl;
+
+  return clusters;
+}
 
 template<typename PointT>
 Box ProcessPointClouds<PointT>::BoundingBox(typename pcl::PointCloud<PointT>::Ptr cluster)
